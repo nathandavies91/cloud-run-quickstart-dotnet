@@ -1,0 +1,6 @@
+.DS_Store
+
+# dotnet core
+/bin
+/obj
+*.sln

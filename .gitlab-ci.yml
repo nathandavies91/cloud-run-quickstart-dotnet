@@ -1,0 +1,38 @@
+image: mcr.microsoft.com/dotnet/sdk:latest
+
+variables:
+  OBJECTS_DIRECTORY: 'obj'
+  NUGET_PACKAGES_DIRECTORY: '.nuget'
+  SOURCE_CODE_PATH: '*/*/'
+
+cache:
+  key: "$CI_JOB_STAGE-$CI_COMMIT_REF_SLUG"
+  paths:
+  policy: pull-push
+
+build:
+  stage: build
+  script:
+    - 'dotnet restore --packages $NUGET_PACKAGES_DIRECTORY'
+    - 'dotnet build --no-restore'
+
+tests:
+  stage: test
+  script:
+    - 'dotnet restore --packages $NUGET_PACKAGES_DIRECTORY'
+    - 'dotnet test --no-restore'
+
+cloud_run:
+  stage: deploy
+  image: google/cloud-sdk:alpine
+  environment: production
+  when: manual
+  only:
+    - main
+  script:
+    - echo $GOOGLE_CLOUD_CREDENTIALS > /tmp/service-key.json
+    - gcloud auth activate-service-account --key-file /tmp/service-key.json
+    - gcloud config set project $PROJECT_ID
+    - gcloud auth configure-docker
+    - gcloud builds submit . --config=cloudbuild.yaml
+    - rm /tmp/service-key.json
